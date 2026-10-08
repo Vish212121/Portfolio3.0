@@ -1,10 +1,11 @@
 const express = require('express');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
 const PORT = 3000;
 
-app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ---- Cached Spotify access token (avoid re-authenticating on every poll) ----
 let cachedToken = null;
@@ -364,6 +365,10 @@ app.put('/api/spotify/pause', async (req, res) => {
 });
 
 
-app.listen(PORT, () => {
-    console.log(`🚀 Server running at http://localhost:${PORT}`);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`🚀 Server running at http://localhost:${PORT}`);
+    });
+}
+
+module.exports = app;
