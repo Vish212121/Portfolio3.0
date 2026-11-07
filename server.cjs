@@ -1,11 +1,11 @@
 const express = require('express');
+const { createServer: createHttpServer } = require('node:http');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
-const PORT = 3000;
-
-app.use(express.static(path.join(__dirname, 'public')));
+const PORT = Number(process.env.PORT) || 3000;
 
 // ---- Cached Spotify access token (avoid re-authenticating on every poll) ----
 let cachedToken = null;
@@ -365,9 +365,37 @@ app.put('/api/spotify/pause', async (req, res) => {
 });
 
 
+async function startServer() {
+    const httpServer = createHttpServer(app);
+    if (process.argv.includes('--preview')) {
+        const builtIndex = path.join(__dirname, 'dist', 'index.html');
+        if (!fs.existsSync(builtIndex)) throw new Error('Build the React app with npm run build first.');
+        app.use(express.static(path.join(__dirname, 'dist')));
+        app.use((req, res, next) => {
+            if (req.method !== 'GET' || req.path.startsWith('/api/')) return next();
+            res.sendFile(builtIndex);
+        });
+    } else {
+        const { createServer } = await import('vite');
+        const vite = await createServer({
+            configFile: path.join(__dirname, 'vite.config.mjs'),
+            server: {
+                middlewareMode: { server: httpServer },
+                ws: { server: httpServer },
+            },
+            appType: 'spa',
+        });
+        app.use(vite.middlewares);
+    }
+    return httpServer.listen(PORT, () => {
+        console.log(`🚀 React portfolio running at http://localhost:${PORT}`);
+    });
+}
+
 if (require.main === module) {
-    app.listen(PORT, () => {
-        console.log(`🚀 Server running at http://localhost:${PORT}`);
+    startServer().catch(error => {
+        console.error('Failed to start portfolio:', error);
+        process.exitCode = 1;
     });
 }
 

@@ -1563,6 +1563,63 @@
 
     const PROJECTS = [
       {
+        name: 'repobrain',
+        topic: 'ai',
+        date: '2026-10-22',
+        stack: 'Python, FastAPI, FalkorDB, MCP, Ollama, React, TypeScript, Vite',
+        content: `# RepoBrain
+
+> Evidence-backed codebase intelligence · Python, FastAPI, FalkorDB, MCP
+
+RepoBrain ingests a public Python repository into a snapshot-scoped knowledge graph, then answers engineering questions with traceable evidence.
+
+## What it does
+
+- **Grounded codebase Q&A:** Routes questions through typed, read-only graph tools and returns evidence with source URLs and snapshot context.
+- **Engineering workflows:** Trace file history, static dependency impact, reviewer activity, and design decisions from repository data.
+- **Interactive exploration:** Pair answer summaries and source evidence with a graph explorer in a React and Vite interface.
+- **Tenant-isolated memory:** Save findings and recall them with semantic and lexical search, including snapshot freshness details.
+
+## Technical approach
+
+- Stores repository snapshots, commits, files, contributors, and relationships in FalkorDB.
+- Uses FastAPI and an MCP gateway to keep graph access typed, read-only, and inspectable.
+- Uses local Ollama models for answer generation and memory embeddings, with deterministic evidence summaries when a model is unavailable.
+- Separates graph-backed facts from model interpretation and surfaces missing evidence and uncertainty.
+
+[GitHub repository](https://github.com/Vish212121/RepoBrain)`
+      },
+      {
+        name: 'write-it-correct',
+        topic: 'ai',
+        date: '2026-10-22',
+        stack: 'JavaScript, Manifest V3, Browser APIs, Groq',
+        content: `# write it correct
+
+> In-editor proofreading and rewriting · JavaScript, Manifest V3, Groq
+
+A browser extension that helps people proofread and rewrite text directly in supported web editors, without moving it into a separate app.
+
+## Writing tools
+
+- **Check while typing:** Find spelling, grammar, punctuation, clarity, and style issues after a short pause.
+- **Fix:** Apply minimal corrections while preserving unaffected text, spacing, and paragraph breaks.
+- **Rewrite:** Improve, shorten, or shift selected text to a formal or casual tone while preserving its meaning.
+- **Selection actions:** Use the selection toolbar or browser context menu to work on highlighted text.
+
+## Safety and privacy
+
+- Validates suggestions against the current source text and rejects stale, overlapping, malformed, or overly broad corrections.
+- Stores the Groq API key in local browser extension storage; requests go directly from the extension background worker to Groq, without a project server.
+- Sends text to Groq only when a live check or requested writing action runs. Live checks can be disabled in Settings.
+
+## Browser support
+
+Manifest V3 builds are provided for Chromium browsers and Firefox. The content script supports inputs, textareas, regular contenteditable editors, open shadow roots, and supported frames. Canvas editors, closed shadow roots, and protected browser pages are outside its access.
+
+[GitHub repository](https://github.com/Vish212121/write-it-correct)`
+      },
+      {
         name: 'codecollab',
         topic: 'web',
         date: '2025-07-15',
@@ -1593,12 +1650,53 @@
     ];
 
     const SKILLS = {
-      languages: ['Java', 'Python', 'SQL', 'JavaScript'],
+      languages: ['Java', 'Python', 'SQL', 'JavaScript', 'TypeScript'],
       cs_fundamentals: ['OOP', 'Data Structures & Algorithms', 'Artificial Intelligence', 'Deep Learning & Generative AI Fundamentals', 'Computer Networks', 'OS', 'DBMS (MySQL)'],
       systems: ['RESTful API Design', 'REST APIs', 'Domain-Driven Design (DDD)', 'Multi-tiered Systems', 'Agile Development'],
-      frameworks: ['React.js', 'Next.js', 'Node.js', 'Express', 'Socket.io', 'TensorFlow/Keras', 'scikit-learn', 'Pandas', 'NumPy', 'Yjs'],
-      tools: ['Git', 'GitHub', 'Docker', 'Redis', 'Charles Proxy', 'Figma', 'Streamlit', 'FAISS']
+      frameworks: ['React.js', 'Next.js', 'Node.js', 'Express', 'FastAPI', 'Vite', 'Socket.io', 'TensorFlow/Keras', 'scikit-learn', 'Pandas', 'NumPy', 'Yjs'],
+      tools: ['Git', 'GitHub', 'Docker', 'Redis', 'FalkorDB', 'MCP', 'Ollama', 'Groq API', 'Charles Proxy', 'Figma', 'Streamlit', 'FAISS']
     };
+
+    const CERTIFICATIONS = [
+      {
+        title: 'ChatGPT + Bing (Copilot): Prompt Engineering Masterclass',
+        provider: 'Udemy',
+        issued: 'Oct 2024',
+        credentialId: 'UC-d1e571d0-a194-4f5b-a06f-f86dd238eb40',
+        skills: ['Prompt Engineering'],
+        credentialUrl: 'https://www.udemy.com/certificate/UC-d1e571d0-a194-4f5b-a06f-f86dd238eb40/'
+      },
+      {
+        title: 'REST API (Intermediate)',
+        provider: 'HackerRank',
+        issued: 'Oct 2026',
+        credentialId: '16D6F57E64E2',
+        skills: ['REST APIs', 'JavaScript'],
+        credentialUrl: 'https://www.hackerrank.com/certificates/iframe/16d6f57e64e2'
+      },
+      {
+        title: 'SQL (Intermediate)',
+        provider: 'HackerRank',
+        credentialId: '3FA4269252B2',
+        skills: ['MySQL'],
+        credentialUrl: 'https://www.hackerrank.com/certificates/iframe/3fa4269252b2'
+      },
+      {
+        title: 'SQL (Basic)',
+        provider: 'HackerRank',
+        issued: 'Oct 2026',
+        credentialId: '0CF3CEDB0B2C',
+        skills: ['MySQL'],
+        credentialUrl: 'https://www.hackerrank.com/certificates/iframe/0cf3cedb0b2c'
+      },
+      {
+        title: 'Generative AI & LLM',
+        provider: 'Udemy',
+        credentialId: 'UC-e59a04af-0c22-4d8a-b24b-b8586e810bd4',
+        skills: [],
+        credentialUrl: 'https://www.udemy.com/certificate/UC-e59a04af-0c22-4d8a-b24b-b8586e810bd4/'
+      },
+    ];
 
     const EXTRACURRICULAR = [
       { role: 'Treasurer', org: 'IETE-TSEC', period: '2024–25', detail: 'Managed end-to-end budgets and sponsorships for 5+ major technical events; led a 60-member marketing and logistics team to ensure resource efficiency and financial transparency.' },
@@ -1607,7 +1705,7 @@
 
     const TOPICS = ['ai', 'web', 'systems', 'experience', 'education', 'skills'];
     const TOPIC_INFO = {
-      ai: 'AI/ML projects: deep learning, NLP, RAG, predictive systems.',
+      ai: 'AI and intelligent software: machine learning, NLP, retrieval, and agent-powered tools.',
       web: 'Full-stack web applications: Next.js, WebSockets, REST APIs.',
       systems: 'Systems & architecture: multi-tiered, DDD, distributed, microservices.',
       experience: 'Professional work experience and internships.',
@@ -2422,6 +2520,7 @@
       if (state.cwd === '~') return [
         { name: 'about.md', kind: 'readme', date: '2025-08-01' }, { name: 'projects/', kind: 'dir', date: '2025-04-05' },
         { name: 'experience/', kind: 'dir', date: '2025-08-01' }, { name: 'skills.md', kind: 'markdown', date: '2025-08-01' },
+        { name: 'certifications.md', kind: 'markdown', date: '2026-10-22' },
         { name: 'education.md', kind: 'markdown', date: '2025-08-01' }, { name: 'extracurricular.md', kind: 'markdown', date: '2025-08-01' },
         { name: 'resume.md', kind: 'readme', date: '2025-08-01' }, { name: 'contact.md', kind: 'file', date: '2025-08-01' },
         { name: 'README.md', kind: 'readme', date: '2025-08-01' },
@@ -2465,6 +2564,7 @@
       vim: () => cmdEditor(['vim']), vi: () => cmdEditor(['vim']), emacs: () => cmdEditor(['emacs']), nano: () => cmdEditor(['nano']),
       about: () => commands.whoami([]), readme: () => commands.cat(['README.md']), contact: () => commands.cat(['contact.md']),
       resume: cmdResume, skills: () => commands.cat(['skills.md']), experience: () => commands.cat(['experience/the-lonely-bag.md']),
+      certifications: () => commands.cat(['certifications.md']),
       education: () => commands.cat(['education.md']), projects: () => commands.ls(['projects/']),
       music: cmdMusic, spotify: cmdMusic, ogtaste: cmdMusic,
     };
@@ -2489,6 +2589,7 @@
   <div class="man-entry"><span class="man-cmd">resume</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;print full resume in terminal format.</div>
   <div class="man-entry"><span class="man-cmd">music</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;view Vishwa's OG music taste (live Spotify).</div>
   <div class="man-entry"><span class="man-cmd">skills</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;shortcut to view skills.md</div>
+  <div class="man-entry"><span class="man-cmd">certifications</span> &nbsp;&nbsp;show certifications and credential links.</div>
   <div class="man-entry"><span class="man-cmd">projects</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;shortcut to list projects</div>
   <div class="man-entry"><span class="man-cmd">experience</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;shortcut to view work experience</div>
   <div class="man-entry"><span class="man-cmd">help [cmd]</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;display this screen, or help for a specific command.</div>
@@ -2528,6 +2629,7 @@
         mail: { synopsis: 'mail [address]', desc: "Open a contact composer. If address is omitted, defaults to " + ABOUT.email + "." },
         resume: { synopsis: 'resume', desc: 'Print the full resume in formatted terminal output — summary, skills, experience, projects, education, extracurriculars.' },
         music: { synopsis: 'music', desc: 'Fetches live data from Spotify API to show what Vishwa is currently listening to, or his last played track.' },
+        certifications: { synopsis: 'certifications', desc: 'Show certifications, skills, credential IDs, and verification links.' },
         help: { synopsis: 'help [command]', desc: 'Display this help screen, or detailed help for a specific command.' },
         clear: { synopsis: 'clear', desc: 'Clear the terminal screen.' },
         history: { synopsis: 'history', desc: 'Show previously entered commands in the current session.' },
@@ -2587,6 +2689,13 @@
         content = `# Contact\n\n- **email:** ${ABOUT.contact.email}\n- **phone:** ${ABOUT.contact.phone}\n- **github:** ${ABOUT.contact.github}\n- **linkedin:** ${ABOUT.contact.linkedin}\n- **location:** ${ABOUT.contact.location}\n\n---\n\nType 'mail ${ABOUT.contact.email}' to compose a message directly in this terminal.`;
       } else if (filename === 'skills.md') {
         content = `# Skills\n\n## Languages\n\n${SKILLS.languages.map(s => `- ${s}`).join('\n')}\n\n## CS Fundamentals\n\n${SKILLS.cs_fundamentals.map(s => `- ${s}`).join('\n')}\n\n## Systems & Architecture\n\n${SKILLS.systems.map(s => `- ${s}`).join('\n')}\n\n## Frameworks & Libraries\n\n${SKILLS.frameworks.map(s => `- ${s}`).join('\n')}\n\n## Tools & Version Control\n\n${SKILLS.tools.map(s => `- ${s}`).join('\n')}`;
+      } else if (filename === 'certifications.md') {
+        const entries = CERTIFICATIONS.map(cert => {
+          const issued = cert.issued ? ` · **Issued:** ${cert.issued}` : '';
+          const skills = cert.skills.length ? `\n\n**Skills:** ${cert.skills.join(', ')}` : '';
+          return `## ${cert.title}\n\n**Provider:** ${cert.provider}${issued}\n\n**Credential ID:** ${cert.credentialId}${skills}\n\n[Show credential](${cert.credentialUrl})`;
+        });
+        content = `# Certifications\n\n${entries.join('\n\n---\n\n')}`;
       } else if (filename === 'education.md') {
         content = `# Education\n\n## Thadomal Shahani Engineering College, Mumbai University\n\n- **Degree:** Bachelor of Engineering\n- **Branch:** Artificial Intelligence and Data Science\n- **Duration:** 2022 – 2026\n- **CGPA:** 7.91 / 10.0\n\n---\n\nCoursework covers object-oriented design, algorithm design, data structures, complexity analysis, artificial intelligence, neural networks, deep learning, computer networks, operating systems, and relational databases.`;
       } else if (filename === 'extracurricular.md') {
@@ -2641,6 +2750,12 @@
 <p class="meta">${escapeHtml(ABOUT.role)} · ${escapeHtml(ABOUT.location)} · session #${Math.floor(Math.random() * 9000 + 1000)}</p>
 <p>${escapeHtml(ABOUT.bio)}</p>
 <h2>Highlights</h2><ul>${ABOUT.highlights.map(h => `<li>${escapeHtml(h)}</li>`).join('')}</ul>
+<h2>Certifications</h2>
+<ul>${CERTIFICATIONS.map(cert => {
+        const issued = cert.issued ? ` | ${escapeHtml(cert.issued)}` : '';
+        const skills = cert.skills.length ? ` | Skills: ${escapeHtml(cert.skills.join(', '))}` : '';
+        return `<li><strong>${escapeHtml(cert.title)}</strong> | ${escapeHtml(cert.provider)}${issued}${skills} | <a href="${escapeHtml(cert.credentialUrl)}" target="_blank" rel="noopener noreferrer">Show credential</a> <span class="meta">(ID: ${escapeHtml(cert.credentialId)})</span></li>`;
+      }).join('')}</ul>
 <h2>Education</h2><p>${escapeHtml(ABOUT.education)}</p>
 <h2>Contact</h2>
 <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-family: monospace;">
@@ -2669,6 +2784,11 @@
 <p><strong>Tools & Version Control:</strong> ${SKILLS.tools.join(', ')}</p>
 <h2>Professional Experience</h2>
  ${EXPERIENCE.map(e => `<h3>${escapeHtml(e.role)} — ${escapeHtml(e.company)}</h3><p class="meta">${escapeHtml(e.location)} · ${escapeHtml(e.period)}</p><ul>${e.points.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>`).join('')}
+<h2>Certifications</h2>
+<ul>${CERTIFICATIONS.map(cert => {
+        const issued = cert.issued ? ` | ${escapeHtml(cert.issued)}` : '';
+        return `<li><strong>${escapeHtml(cert.title)}</strong> | ${escapeHtml(cert.provider)}${issued} | <a href="${escapeHtml(cert.credentialUrl)}" target="_blank" rel="noopener noreferrer">Show credential</a></li>`;
+      }).join('')}</ul>
 <h2>Projects</h2>
  ${PROJECTS.map(p => `<h3>${escapeHtml(p.name)}</h3><p class="meta">${escapeHtml(p.stack)} · ${escapeHtml(p.date)}</p><p>${escapeHtml(p.content.split('\n').filter(l => !l.startsWith('#') && !l.startsWith('>') && l.trim() !== '')[0] || '')}</p>`).join('')}
 <h2>Education</h2><p>${escapeHtml(ABOUT.education)}</p>
