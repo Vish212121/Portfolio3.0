@@ -35,8 +35,9 @@ export default function AmbientLyrics() {
   useEffect(() => {
     setScreen(document.getElementById('screen'));
 
+    const previewParams = new URLSearchParams(window.location.search);
     const showLocalPreview = import.meta.env.DEV
-      && new URLSearchParams(window.location.search).get('lyricsPreview') === '1';
+      && (previewParams.get('lyricsPreview') === '1' || previewParams.get('musicPreview') === '1');
     if (showLocalPreview) {
       const sampleLines = [
         'City lights dissolve into rain',

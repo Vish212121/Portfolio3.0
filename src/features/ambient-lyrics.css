@@ -25,8 +25,19 @@
   animation: ambient-lyric-enter 700ms ease-out both;
 }
 
+.screen.music-mode .ambient-lyrics__line {
+  max-width: min(980px, 82%);
+  opacity: 0.27;
+  font-size: clamp(3rem, 7vw, 7.5rem);
+  text-shadow: 0 0 30px color-mix(in srgb, var(--fg-bright) 25%, transparent);
+}
+
 body.theme-beige .ambient-lyrics__line {
   opacity: 0.085;
+}
+
+body.theme-beige .screen.music-mode .ambient-lyrics__line {
+  opacity: 0.18;
 }
 
 @keyframes ambient-lyric-enter {
@@ -37,6 +48,7 @@ body.theme-beige .ambient-lyrics__line {
 @media (max-width: 768px) {
   .ambient-lyrics { inset: 24px 12px 22px; }
   .ambient-lyrics__line { font-size: clamp(2.6rem, 11vw, 5rem); }
+  .screen.music-mode .ambient-lyrics__line { max-width: 90%; font-size: clamp(2.3rem, 9vw, 4.5rem); }
 }
 
 @media (prefers-reduced-motion: reduce) {

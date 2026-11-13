@@ -13,7 +13,7 @@ export function mountPortfolioTerminal() {
       phase: 'lock', input: '', history: [], historyIdx: -1,
       cwd: '~/portfolio', topic: null, scanlinesOn: true, sound: true,
       ghostText: '', visitorName: '',
-      musicPoll: null, musicTick: null, musicEq: null, musicCassette: null, lyricsData: null, lastLyricIdx: -1,
+      musicPoll: null, musicTick: null, musicEq: null, musicCassette: null, musicGeneration: 0,
       musicIdleTimer: null, musicOrbStop: null, musicOrbGuard: null, musicOrbKey: null
     };
 
@@ -552,14 +552,14 @@ export function mountPortfolioTerminal() {
     // restart, and by cmdClear/cmdExit. clearInterval(null) is a
     // safe no-op, so this can never throw.
     function stopMusicPlayer() {
+      state.musicGeneration++;
       if (state.musicPoll) { clearInterval(state.musicPoll); state.musicPoll = null; }
       if (state.musicTick) { clearInterval(state.musicTick); state.musicTick = null; }
       if (state.musicEq) { clearInterval(state.musicEq); state.musicEq = null; }
       if (state.musicCassette) { clearInterval(state.musicCassette); state.musicCassette = null; }
       if (state.musicIdleTimer) { clearTimeout(state.musicIdleTimer); state.musicIdleTimer = null; }
       stopMusicOrb();
-      state.lyricsData = null;
-      state.lastLyricIdx = -1;
+      $screen.classList.remove('music-mode');
     }
 
     // ════════════════════════════════════════════════════════════
@@ -1288,13 +1288,20 @@ export function mountPortfolioTerminal() {
     // ----- Spotify Music Command (phosphor orb edition) -----
 
     async function cmdMusic() {
-      // Full teardown of any previous player instance
       stopMusicPlayer();
+      unmountFigures();
+      $output.innerHTML = '';
+      $terminal.scrollTop = 0;
+      $screen.classList.add('music-mode');
 
+      const generation = state.musicGeneration;
       const musicId = `music-${Date.now()}`;
       let currentTrack = null;
-      let lyricsRequestId = 0; // guards against stale/out-of-order lyrics responses
       let isIdle = false;
+      const samplePreview = import.meta.env.DEV
+        && new URLSearchParams(window.location.search).get('musicPreview') === '1';
+      let previewPlaying = true;
+      let previewProgressMs = 42000;
       let trackProfile = { energy: 0.6, pulseMs: 150 }; // simulated per-track "feel", replaced on track change
       const IDLE_THRESHOLD_MS = 90 * 1000; // dim the panel after 90s with nothing playing
 
@@ -1305,21 +1312,14 @@ export function mountPortfolioTerminal() {
         return `${min}:${sec.toString().padStart(2, '0')}`;
       };
 
-      // Scrub-line style: played track as a heavy line, a cursor dot at the current
-      // position, and unplayed track as light dots - reads more like a DAW timeline
-      // than a loading bar.
-      const progressBar = (rawPct) => {
-        const totalBlocks = 16;
-        const pct = Math.max(0, Math.min(1, Number.isFinite(rawPct) ? rawPct : 0));
-        const pos = Math.round(pct * (totalBlocks - 1));
-        let bar = '';
-        for (let i = 0; i < totalBlocks; i++) {
-          if (i < pos) bar += '━';
-          else if (i === pos) bar += '●';
-          else bar += '·';
-        }
-        return bar;
-      };
+      function renderProgress(progressMs, durationMs) {
+        const duration = Number(durationMs) || 0;
+        const progress = Math.max(0, Number(progressMs) || 0);
+        const pct = duration ? Math.min(100, progress / duration * 100) : 0;
+        document.getElementById(`${musicId}-progress`).style.width = `${pct}%`;
+        document.getElementById(`${musicId}-elapsed`).textContent = fmtTime(progress);
+        document.getElementById(`${musicId}-duration`).textContent = fmtTime(duration);
+      }
 
       // Deterministic per-track "feel" - NOT real Spotify audio data. Spotify locked
       // audio-features/audio-analysis behind extended-quota access in Nov 2024, so we
@@ -1347,92 +1347,44 @@ export function mountPortfolioTerminal() {
         return { energy, pulseMs };
       }
 
-      // LRC Parser: Converts [00:12.34] Text -> { time: 12.34, text: 'Text' }
-      function parseLRC(lrc) {
-        if (!lrc) return null;
-        const lines = lrc.split('\n');
-        const parsed = [];
-        const regex = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
-        for (const line of lines) {
-          const match = line.match(regex);
-          if (match) {
-            const min = parseInt(match[1]);
-            const sec = parseInt(match[2]);
-            const ms = parseInt(match[3]);
-            const time = min * 60 + sec + ms / 1000;
-            const text = match[4].trim();
-            if (text) parsed.push({ time, text });
-          }
-        }
-        return parsed.length > 0 ? parsed : null;
-      }
-
-      // Karaoke Renderer (targets the inner lyrics div — never the orb host)
-      function renderLyrics(currentMs) {
-        if (!state.lyricsData) return;
-        const sec = currentMs / 1000;
-        let currIdx = -1;
-
-        for (let i = 0; i < state.lyricsData.length; i++) {
-          if (sec >= state.lyricsData[i].time) {
-            currIdx = i;
-          } else {
-            break;
-          }
-        }
-
-        if (currIdx !== state.lastLyricIdx) {
-          state.lastLyricIdx = currIdx;
-          const el = document.getElementById(`${musicId}-lyrics`);
-          if (!el) return;
-
-          let html = '';
-          if (currIdx > 0) html += `<div class="lyric-prev">${escapeHtml(state.lyricsData[currIdx - 1].text)}</div>`;
-          if (currIdx >= 0) {
-            html += `<div class="lyric-curr">▶ ${escapeHtml(state.lyricsData[currIdx].text)}</div>`;
-          } else {
-            html += `<div class="lyric-prev">♪ ♫ ♪</div>`;
-            html += `<div class="lyric-curr">♪ ♫ ♪</div>`;
-          }
-          if (state.lyricsData[currIdx + 1]) html += `<div class="lyric-next">${escapeHtml(state.lyricsData[currIdx + 1].text)}</div>`;
-          if (state.lyricsData[currIdx + 2]) html += `<div class="lyric-next" style="opacity: 0.4">${escapeHtml(state.lyricsData[currIdx + 2].text)}</div>`;
-
-          el.innerHTML = html;
-        }
-      }
-
-      // Draw initial scaffold (Two Column Layout).
+      // Track information and transport stay at the edges so the ambient lyric
+      // line has the center of the screen to itself.
       printRaw(`
-<div class="music-player md" id="${musicId}">
-  <div class="lyrics-pane">
-    <div class="visualizer" id="${musicId}-orb"></div>
-    <div id="${musicId}-lyrics">
-      <div class="lyric-prev">♪ ♫ ♪</div>
-      <div class="lyric-curr">Fetching lyrics...</div>
-      <div class="lyric-next">♪ ♫ ♪</div>
+<section class="music-player" id="${musicId}" aria-label="Music player">
+  <div class="music-player-top">
+    <div class="music-track-info">
+      <div class="music-kicker">♫ &nbsp; VISHWA'S SPOTIFY <span class="music-kicker-sep">/</span> ${samplePreview ? 'LOCAL PREVIEW' : 'NOW PLAYING'}</div>
+      <h2 class="music-track" id="${musicId}-track">${samplePreview ? 'Midnight in Motion' : 'Connecting to Spotify…'}</h2>
+      <p class="music-artist" id="${musicId}-artist">${samplePreview ? 'Luna Vale' : ''}</p>
+      <p class="music-album" id="${musicId}-album">${samplePreview ? 'Afterglow Sessions · 2025' : ''}</p>
     </div>
-  </div>
-  <div class="info-pane">
-    <pre class="cassette" id="${musicId}-cassette">  ╔═════════════╗
+    <div class="music-art" aria-hidden="true">
+      <div class="visualizer" id="${musicId}-orb"></div>
+      <pre class="cassette" id="${musicId}-cassette">  ╔═════════════╗
 ┌─╗║   ◉     ◉   ║╗─┐
 │ ║║             ║║ │
 └─╝║   ◉     ◉   ║╝─┘
   ╚═════════════╝</pre>
-    <h2>♫ Into Vishwa's Spotify</h2>
-    <p><strong>Track:</strong>&nbsp;&nbsp;&nbsp;<span id="${musicId}-track">Loading...</span></p>
-    <p><strong>Artist:</strong>&nbsp;&nbsp;&nbsp;<span id="${musicId}-artist"></span></p>
-    <p><strong>Album:</strong>&nbsp;&nbsp;&nbsp;&nbsp;<span id="${musicId}-album"></span></p>
-    <div style="margin: 10px 0; display: flex; gap: 8px; flex-wrap: wrap;">
-      <button class="composer-btn" id="${musicId}-play-btn">▶ Play</button>
-      <button class="composer-btn secondary" id="${musicId}-pause-btn">⏸ Pause</button>
-    </div>
-    <p>Progress: [<span id="${musicId}-bar">················</span>]</p>
-    <p><span id="${musicId}-time">0:00 / 0:00</span></p>
-    <p class="meta" id="${musicId}-status">► Fetching...</p>
   </div>
-</div>`);
+  </div>
+  <div class="music-player-space" aria-hidden="true"></div>
+  <div class="music-player-bottom">
+    <div class="music-transport">
+      <div class="music-transport-buttons">
+        <button class="music-control" id="${musicId}-play-btn" aria-label="Play">▶ <span>PLAY</span></button>
+        <button class="music-control" id="${musicId}-pause-btn" aria-label="Pause">Ⅱ <span>PAUSE</span></button>
+      </div>
+      <span class="music-status" id="${musicId}-status">${samplePreview ? '► Playing · local sample' : 'Connecting…'}</span>
+    </div>
+    <div class="music-progress-row">
+      <span id="${musicId}-elapsed">0:00</span>
+      <div class="music-progress-rail" role="progressbar" aria-label="Track progress"><span id="${musicId}-progress"></span></div>
+      <span id="${musicId}-duration">0:00</span>
+    </div>
+  </div>
+</section>`);
 
-      // --- Orb Visualizer (replaces the old text EQ) ---
+      // --- Orb Visualizer ---
       const orbHost = document.getElementById(`${musicId}-orb`);
 
       function orbSpeedFor(p) {
@@ -1470,44 +1422,6 @@ export function mountPortfolioTerminal() {
       startOrbVisualizer(1.1, 0.4);
       orbHost.style.opacity = '0.8';
 
-      // --- Helper: Lyrics ---
-      async function fetchLyrics(track, artist, lyricsId) {
-        const requestId = ++lyricsRequestId; // snapshot - if a newer request starts before this resolves, we bail
-
-        try {
-          let cleanTrack = track.split(' (')[0].split(' [')[0].trim();
-          let cleanArtist = artist.split(',')[0].split('&')[0].split(' feat.')[0].trim();
-
-          const res = await fetch(`/api/lyrics?artist=${encodeURIComponent(cleanArtist)}&track=${encodeURIComponent(cleanTrack)}`);
-
-          if (requestId !== lyricsRequestId) return;
-
-          if (!res.ok) throw new Error('API Error');
-          const data = await res.json();
-
-          if (requestId !== lyricsRequestId) return;
-
-          const el = document.getElementById(lyricsId);
-
-          const parsed = parseLRC(data.synced);
-          if (parsed) {
-            state.lyricsData = parsed;
-            state.lastLyricIdx = -1;
-            renderLyrics(0);
-          } else if (data.plain) {
-            state.lyricsData = null;
-            if (el) el.innerHTML = `<div class="lyric-curr">${escapeHtml(data.plain.split('\n').slice(0, 4).join(' '))}</div>`;
-          } else {
-            state.lyricsData = null;
-            if (el) el.innerHTML = `<div class="lyric-curr">Lyrics not found.</div>`;
-          }
-        } catch (e) {
-          if (requestId !== lyricsRequestId) return;
-          const el = document.getElementById(lyricsId);
-          if (el) el.innerHTML = `<div class="lyric-curr">Lyrics: currently on vacation.</div>`;
-        }
-      }
-
       // --- Helper: Spinning Cassette ---
       function startCassette(casId, pulseMs) {
         const reels = ['◉', '◎', '○', '◎'];
@@ -1544,8 +1458,7 @@ export function mountPortfolioTerminal() {
       function applyIdleVisual(active) {
         const el = document.getElementById(musicId);
         if (!el) return;
-        const infoPane = el.querySelector('.info-pane');
-        if (infoPane) infoPane.style.opacity = active ? '0.45' : '1';
+        el.classList.toggle('music-player--idle', active);
         if (active) { stopOrbVisualizer(); orbHost.style.opacity = '0.35'; }
       }
       function scheduleIdle() {
@@ -1571,21 +1484,31 @@ export function mountPortfolioTerminal() {
       // absorb that registration lag, then surface a real status message if it
       // still fails instead of pretending it worked.
       async function sendTransportCommand(action, isRetry = false) {
+        if (generation !== state.musicGeneration) return;
+        if (samplePreview) {
+          previewPlaying = action === 'play';
+          fetchAndUpdate();
+          return;
+        }
         try {
           const res = await fetch(`/api/spotify/${action}`, { method: 'PUT' });
+          if (generation !== state.musicGeneration) return;
           if (res.ok) {
             fetchAndUpdate();
             return;
           }
           if (res.status === 404 && !isRetry) {
             setStatus(`► No active device yet, retrying...`);
-            setTimeout(() => sendTransportCommand(action, true), 1500);
+            setTimeout(() => {
+              if (generation === state.musicGeneration) sendTransportCommand(action, true);
+            }, 1500);
             return;
           }
           setStatus(res.status === 404
             ? '► No active device — open Spotify, hit play once there, then retry'
             : `► ${action === 'play' ? 'Play' : 'Pause'} failed (${res.status})`);
         } catch (e) {
+          if (generation !== state.musicGeneration) return;
           console.error(`${action} error:`, e);
           setStatus(`► ${action === 'play' ? 'Play' : 'Pause'} failed — network error`);
         }
@@ -1602,84 +1525,96 @@ export function mountPortfolioTerminal() {
 
       // --- Main Sync Loop ---
       async function fetchAndUpdate() {
+        if (generation !== state.musicGeneration) return;
         try {
-          const res = await fetch('/api/spotify');
-          if (!res.ok) return;
-          const data = await res.json();
+          let data;
+          if (samplePreview) {
+            data = {
+              track: 'Midnight in Motion', artist: 'Luna Vale',
+              album: 'Afterglow Sessions · 2025', device: 'local sample',
+              duration_ms: 214000, progress_ms: previewProgressMs,
+              isPlaying: previewPlaying
+            };
+          } else {
+            const res = await fetch('/api/spotify');
+            if (!res.ok) throw new Error(`Spotify returned ${res.status}`);
+            data = await res.json();
+          }
 
           const el = document.getElementById(musicId);
-          if (!el) { stopMusicPlayer(); return; }
+          if (generation !== state.musicGeneration || !el) return;
 
           const hasTrack = Boolean(data.track);
 
           if (hasTrack && data.track !== currentTrack) {
             currentTrack = data.track;
             trackProfile = getTrackProfile(data.track, data.artist);
-            state.lyricsData = null;
-            state.lastLyricIdx = -1;
             document.getElementById(`${musicId}-track`).textContent = data.track;
-            document.getElementById(`${musicId}-artist`).textContent = data.artist;
-            document.getElementById(`${musicId}-album`).textContent = data.album;
-
-            fetchLyrics(data.track, data.artist, `${musicId}-lyrics`);
+            document.getElementById(`${musicId}-artist`).textContent = data.artist || '';
+            document.getElementById(`${musicId}-album`).textContent = data.album || '';
           } else if (!hasTrack && currentTrack !== null) {
             currentTrack = null;
-            lyricsRequestId++;
-            state.lyricsData = null;
-            state.lastLyricIdx = -1;
           }
 
           if (data.isPlaying) {
             cancelIdle();
-            document.getElementById(`${musicId}-bar`).textContent = progressBar(data.progress_ms / data.duration_ms);
-            document.getElementById(`${musicId}-time`).textContent = `${fmtTime(data.progress_ms)} / ${fmtTime(data.duration_ms)}`;
-            setStatus(`► Currently playing ${data.device ? 'on ' + data.device : ''}`);
+            renderProgress(data.progress_ms, data.duration_ms);
+            setStatus(samplePreview ? '► Playing · local sample' : `► Playing${data.device ? ' on ' + data.device : ''}`);
+            document.getElementById(`${musicId}-play-btn`).setAttribute('aria-pressed', 'true');
+            document.getElementById(`${musicId}-pause-btn`).setAttribute('aria-pressed', 'false');
 
             activeOrb();
             startCassette(`${musicId}-cassette`, trackProfile.pulseMs);
-            renderLyrics(data.progress_ms);
 
             if (state.musicTick) { clearInterval(state.musicTick); state.musicTick = null; }
 
-            let localMs = data.progress_ms;
-            const durationMs = data.duration_ms;
+            let localMs = Number(data.progress_ms) || 0;
+            const durationMs = Number(data.duration_ms) || 0;
             state.musicTick = setInterval(() => {
-              localMs += 1000;
-              if (localMs >= durationMs) {
+              if (generation !== state.musicGeneration || !el.isConnected) {
                 clearInterval(state.musicTick); state.musicTick = null;
+                return;
+              }
+              localMs += 1000;
+              if (samplePreview) previewProgressMs = localMs;
+              if (durationMs && localMs >= durationMs) {
+                clearInterval(state.musicTick); state.musicTick = null;
+                if (samplePreview) previewProgressMs = 0;
                 fetchAndUpdate();
                 return;
               }
-              document.getElementById(`${musicId}-bar`).textContent = progressBar(localMs / durationMs);
-              document.getElementById(`${musicId}-time`).textContent = `${fmtTime(localMs)} / ${fmtTime(durationMs)}`;
-              renderLyrics(localMs);
+              renderProgress(localMs, durationMs);
             }, 1000);
           } else if (data.progress_ms !== undefined) {
             if (state.musicTick) { clearInterval(state.musicTick); state.musicTick = null; }
             calmOrb();
             stopCassette(`${musicId}-cassette`);
 
-            document.getElementById(`${musicId}-bar`).textContent = progressBar(data.progress_ms / data.duration_ms);
-            document.getElementById(`${musicId}-time`).textContent = `${fmtTime(data.progress_ms)} / ${fmtTime(data.duration_ms)}`;
-            setStatus(`► Paused ${data.device ? 'on ' + data.device : ''}`);
-            renderLyrics(data.progress_ms);
+            renderProgress(data.progress_ms, data.duration_ms);
+            setStatus(samplePreview ? 'Ⅱ Paused · local sample' : `Ⅱ Paused${data.device ? ' on ' + data.device : ''}`);
+            document.getElementById(`${musicId}-play-btn`).setAttribute('aria-pressed', 'false');
+            document.getElementById(`${musicId}-pause-btn`).setAttribute('aria-pressed', 'true');
             scheduleIdle();
           } else {
             if (state.musicTick) { clearInterval(state.musicTick); state.musicTick = null; }
             calmOrb();
             stopCassette(`${musicId}-cassette`);
             setStatus(`► Played ${data.played_ago || 'recently'}`);
+            document.getElementById(`${musicId}-play-btn`).setAttribute('aria-pressed', 'false');
+            document.getElementById(`${musicId}-pause-btn`).setAttribute('aria-pressed', 'false');
             scheduleIdle();
-            const lEl = document.getElementById(`${musicId}-lyrics`);
-            if (lEl && state.lyricsData === null) lEl.innerHTML = `<div class="lyric-curr">Press play to see lyrics...</div>`;
           }
         } catch (e) {
+          if (generation !== state.musicGeneration) return;
+          setStatus('Spotify is unavailable locally');
           console.error('Sync error:', e);
         }
       }
 
       await fetchAndUpdate();
-      state.musicPoll = setInterval(fetchAndUpdate, 5000);
+      if (generation === state.musicGeneration && document.getElementById(musicId)) {
+        state.musicPoll = setInterval(fetchAndUpdate, 5000);
+      }
     }
 
 
@@ -1771,6 +1706,13 @@ export function mountPortfolioTerminal() {
       if (state.ghostText) { state.input += state.ghostText; state.ghostText = ''; }
       const cmd = state.input.trim();
       if (state.phase === 'lock') { await executeLockCommand(cmd); return; }
+      const isMusicCommand = (name) => ['music', 'spotify', 'ogtaste'].includes(name);
+      if ($screen.classList.contains('music-mode') && !cmd) { state.input = ''; renderInput(); return; }
+      const firstName = cmd.split('&&')[0].trim().split(/\s+/)[0];
+      if ($screen.classList.contains('music-mode') && !isMusicCommand(firstName)) {
+        stopMusicPlayer();
+        $output.innerHTML = '';
+      }
       print(`<span class="prompt-user">${escapeHtml(state.visitorName || 'vishwa')}</span><span class="prompt-sep">@</span><span class="prompt-host">portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">${escapeHtml(state.cwd)}</span><span class="prompt-sep">$</span> ${escapeHtml(cmd)}`);
       state.input = '';
       if (cmd) {
@@ -1778,8 +1720,13 @@ export function mountPortfolioTerminal() {
         const chain = cmd.split('&&').map(s => s.trim()).filter(Boolean);
         for (const sub of chain) {
           const parts = sub.split(/\s+/); const name = parts[0]; const args = parts.slice(1);
+          if ($screen.classList.contains('music-mode') && !isMusicCommand(name)) {
+            stopMusicPlayer();
+            $output.innerHTML = '';
+            if (chain.length > 1) print(`<span class="prompt-user">${escapeHtml(state.visitorName || 'vishwa')}</span><span class="prompt-sep">@</span><span class="prompt-host">portfolio</span><span class="prompt-sep">:</span><span class="prompt-path">${escapeHtml(state.cwd)}</span><span class="prompt-sep">$</span> ${escapeHtml(sub)}`);
+          }
           if (commands[name]) {
-            bgOrbPulse(); // the machine thinks
+            if (!isMusicCommand(name)) bgOrbPulse(); // leave the lyric center calm
             try {
               const result = commands[name](args);
               // async commands (music) return promises — catch those too,
