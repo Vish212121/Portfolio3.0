@@ -1873,10 +1873,6 @@ export function mountPortfolioTerminal() {
       print('<span class="text-dim">— portfolio OS v3.0 · interactive shell —</span>'); print(''); await sleep(150);
       const bootLines = [
         { text: '[ <span class="text-success">OK</span> ] Initializing portfolio OS v3.0...', delay: 120 },
-        { text: '[ <span class="text-success">OK</span> ] Mounting /dev/keyboard → /dev/input', delay: 110 },
-        { text: '[ <span class="text-success">OK</span> ] Mounting /dev/screen → /dev/tty1', delay: 110 },
-        { text: '[ <span class="text-success">OK</span> ] Loading character ROM... 256 glyphs', delay: 140 },
-        { text: '[ <span class="text-success">OK</span> ] Initializing phosphor decay simulation', delay: 130 },
         { text: `[ <span class="text-info">..</span> ] Loading profile: ${escapeHtml(ABOUT.name)}`, delay: 120 },
         { text: `[ <span class="text-info">..</span> ] Loading projects: ${PROJECTS.length} entries`, delay: 120 },
         { text: `[ <span class="text-info">..</span> ] Loading experience: ${EXPERIENCE.length} role(s)`, delay: 120 },
@@ -1889,7 +1885,7 @@ export function mountPortfolioTerminal() {
       print(`<span class="text-dim">${escapeHtml(ABOUT.role)}</span>`);
       print('<span class="text-dim">Type \'help\' to see available commands. Type \'whoami\' for summary. Type \'resume\' for full CV.</span>');
       print('<span class="text-dim">Tab completes. Up/Down arrows cycle history. Ctrl+L clears. Try: ls, cd projects, cat about.md</span>');
-      print(''); print(`<span class="text-dim">— last login: never · session #${Math.floor(Math.random() * 9000 + 1000)} —</span>`); print('');
+
       state.phase = 'unlocked'; state.history = []; state.historyIdx = -1; renderInput();
     }
 
