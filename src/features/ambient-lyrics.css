@@ -1,0 +1,44 @@
+.ambient-lyrics {
+  position: absolute;
+  inset: 28px 22px 22px;
+  z-index: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.ambient-lyrics__line {
+  display: block;
+  max-width: min(1100px, 92%);
+  color: var(--fg-bright);
+  opacity: 0.12;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(3.5rem, 8vw, 9rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.075em;
+  text-align: center;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  animation: ambient-lyric-enter 700ms ease-out both;
+}
+
+body.theme-beige .ambient-lyrics__line {
+  opacity: 0.085;
+}
+
+@keyframes ambient-lyric-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+  .ambient-lyrics { inset: 24px 12px 22px; }
+  .ambient-lyrics__line { font-size: clamp(2.6rem, 11vw, 5rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-lyrics__line { animation: none; }
+}

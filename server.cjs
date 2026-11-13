@@ -2,6 +2,9 @@ const express = require('express');
 const { createServer: createHttpServer } = require('node:http');
 const path = require('path');
 const fs = require('fs');
+// Vercel CLI writes pulled environment variables to .env.local. Load it first
+// so it takes precedence over the fallback .env file during local development.
+require('dotenv').config({ path: '.env.local' });
 require('dotenv').config();
 
 const app = express();
@@ -10,6 +13,7 @@ const PORT = Number(process.env.PORT) || 3000;
 // ---- Cached Spotify access token (avoid re-authenticating on every poll) ----
 let cachedToken = null;
 let tokenExpiresAt = 0;
+let lastSpotifyErrorAt = 0;
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 6000) {
     const controller = new AbortController();
@@ -27,6 +31,14 @@ async function getAccessToken() {
     const clientId = process.env.SPOTIFY_CLIENT_ID;
     const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
     const refreshToken = process.env.SPOTIFY_REFRESH_TOKEN;
+    const missing = [
+        ['SPOTIFY_CLIENT_ID', clientId],
+        ['SPOTIFY_CLIENT_SECRET', clientSecret],
+        ['SPOTIFY_REFRESH_TOKEN', refreshToken],
+    ].filter(([, value]) => !value).map(([name]) => name);
+    if (missing.length) {
+        throw new Error(`Spotify configuration missing: ${missing.join(', ')}`);
+    }
     const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
     const TOKEN_ENDPOINT = 'https://accounts.spotify.com/api/token';
 
@@ -42,8 +54,21 @@ async function getAccessToken() {
         }),
     });
 
-    const tokenData = await tokenRes.json();
-    if (!tokenData.access_token) throw new Error('Failed to get access token');
+    let tokenData;
+    try {
+        tokenData = await tokenRes.json();
+    } catch {
+        throw new Error(`Spotify token endpoint returned invalid JSON (HTTP ${tokenRes.status})`);
+    }
+    if (!tokenRes.ok || !tokenData.access_token) {
+        const code = typeof tokenData.error === 'string' ? tokenData.error : 'unknown_error';
+        const reason = code === 'invalid_grant'
+            ? 'the refresh token is invalid, expired, or revoked; update SPOTIFY_REFRESH_TOKEN in the local .env'
+            : code === 'invalid_client'
+                ? 'the client ID and client secret do not match; check the local .env'
+                : 'check the local Spotify credentials and app configuration';
+        throw new Error(`Spotify token request failed (HTTP ${tokenRes.status}, ${code}): ${reason}`);
+    }
 
     cachedToken = tokenData.access_token;
     // Refresh 60s before actual expiry to be safe
@@ -125,8 +150,11 @@ app.get('/api/spotify', async (req, res) => {
         const data = await getSpotifyData();
         res.status(200).json(data);
     } catch (e) {
-        console.error('Spotify API Error:', e);
-        res.status(500).json({ error: 'Internal Server Error' });
+        if (Date.now() - lastSpotifyErrorAt > 60_000) {
+            console.error('Spotify API Error:', e.message);
+            lastSpotifyErrorAt = Date.now();
+        }
+        res.status(502).json({ error: e.message });
     }
 });
 

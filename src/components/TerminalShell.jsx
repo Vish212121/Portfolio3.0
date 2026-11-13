@@ -1,3 +1,5 @@
+import ThemeSwitch from './ThemeSwitch.jsx';
+
 function TitleBar() {
   return (
     <div className="titlebar">
@@ -7,6 +9,7 @@ function TitleBar() {
         <div className="tb-btn max" />
       </div>
       <div className="titlebar-title">guest@vishwa: ~/portfolio — tty1</div>
+      <ThemeSwitch />
       <div className="titlebar-info">80×24</div>
     </div>
   );

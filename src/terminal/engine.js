@@ -5,14 +5,14 @@ import { FEATURE_COMMANDS, createFeatureCommands } from '../features/commands.js
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import ProjectVisual from '../project-stories/ProjectVisual.jsx';
+import { getActiveTheme, getThemePreference, setThemePreference } from '../theme/themeController.js';
 
 export function mountPortfolioTerminal() {
-    document.body.classList.remove('theme-amber', 'theme-green', 'theme-cyan');
     document.body.classList.add('theme-locked');
     const state = {
       phase: 'lock', input: '', history: [], historyIdx: -1,
       cwd: '~/portfolio', topic: null, scanlinesOn: true, sound: true,
-      theme: 'amber', ghostText: '', visitorName: '',
+      ghostText: '', visitorName: '',
       musicPoll: null, musicTick: null, musicEq: null, musicCassette: null, lyricsData: null, lastLyricIdx: -1,
       musicIdleTimer: null, musicOrbStop: null, musicOrbGuard: null, musicOrbKey: null
     };
@@ -761,7 +761,6 @@ export function mountPortfolioTerminal() {
         if (glyphCursorEl && $inputText.parentElement) $inputText.parentElement.appendChild(glyphCursorEl);
 
         document.body.classList.remove('theme-locked');
-        document.body.classList.add('theme-amber');
         startBgOrb(); // the orb that solved your identity now lives behind the portfolio
         $output.innerHTML = '';
         state.cwd = '~'; state.topic = null; state.input = ''; state.phase = 'unlocking';
@@ -769,7 +768,7 @@ export function mountPortfolioTerminal() {
         if (tb) tb.textContent = `${name}@vishwa: ~/portfolio — tty1`;
         updatePrompt();
 
-        // 6 — CRT power on into amber
+        // 6 — CRT power on into the selected portfolio theme
         if (!introReduced) {
           $screen.classList.remove('crt-off');
           $screen.classList.add('crt-on');
@@ -790,6 +789,7 @@ export function mountPortfolioTerminal() {
       // ── keyboard capture (runs before the terminal's handler) ──
       introKeyHandler = function (e) {
         if (!introLayer || !introLayer.isConnected) return;
+        if (e.target?.closest?.('.theme-switch')) return;
         if (e.ctrlKey || e.metaKey || e.altKey) { e.stopPropagation(); return; } // keep browser shortcuts
         if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); introSubmit(); return; }
         if (e.key === 'Backspace') { e.preventDefault(); e.stopPropagation(); introBackspace(); return; }
@@ -876,7 +876,7 @@ export function mountPortfolioTerminal() {
 
       $screen.classList.add('flicker-hard'); await sleep(400); $screen.classList.remove('flicker-hard');
 
-      document.body.classList.remove('theme-locked'); document.body.classList.add('theme-amber');
+      document.body.classList.remove('theme-locked');
       $output.innerHTML = ''; state.cwd = '~'; state.topic = null;
       await bootSequence();
     }
@@ -928,7 +928,7 @@ export function mountPortfolioTerminal() {
   <div class="man-entry"><span class="man-cmd">history</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;show command history.</div>
   <div class="man-entry"><span class="man-cmd">pwd</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;print current working directory.</div>
   <div class="man-entry"><span class="man-cmd">neofetch</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;display system info with ASCII art.</div>
-  <div class="man-entry"><span class="man-cmd">theme &lt;n&gt;</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;switch color theme: amber, green, cyan.</div>
+  <div class="man-entry"><span class="man-cmd">theme &lt;n&gt;</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;switch color theme: auto, light, dark, beige, amber, green, cyan.</div>
   <div class="man-entry"><span class="man-cmd">sound [on|off]</span> &nbsp;&nbsp;toggle typing sound effects.</div>
   <div class="man-entry"><span class="man-cmd">scanlines</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;toggle CRT scanline overlay.</div>
   <div class="man-entry"><span class="man-cmd">echo &lt;txt&gt;</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;echo text back to the terminal.</div>
@@ -965,7 +965,7 @@ export function mountPortfolioTerminal() {
         history: { synopsis: 'history', desc: 'Show previously entered commands in the current session.' },
         pwd: { synopsis: 'pwd', desc: 'Print the current working directory.' },
         neofetch: { synopsis: 'neofetch', desc: 'Display system information with ASCII art.' },
-        theme: { synopsis: 'theme <name>', desc: 'Switch color theme. Options: amber (default), green, cyan.' },
+        theme: { synopsis: 'theme <name>', desc: 'Switch color theme. Auto uses beige from 7 AM to 7 PM and dark amber at night. Options: auto, light, dark, beige, amber, green, cyan.' },
         sound: { synopsis: 'sound [on|off]', desc: 'Toggle typing sound effects. Without args, toggles current state.' },
         scanlines: { synopsis: 'scanlines [on|off]', desc: 'Toggle CRT scanline overlay. Without args, toggles current state.' },
         echo: { synopsis: 'echo <text>', desc: 'Echo text back to the terminal.' },
@@ -1206,7 +1206,7 @@ export function mountPortfolioTerminal() {
 <div class="nf-line"><span class="nf-label">CPU</span><span class="nf-sep">:</span>Intel Core i7 @ 3.2GHz</div>
 <div class="nf-line"><span class="nf-label">Memory</span><span class="nf-sep">:</span>16GB / 16GB</div>
 <div class="nf-line"><span class="nf-label">Resolution</span><span class="nf-sep">:</span>80x24 chars</div>
-<div class="nf-line"><span class="nf-label">Theme</span><span class="nf-sep">:</span>${state.theme} phosphor</div>
+<div class="nf-line"><span class="nf-label">Theme</span><span class="nf-sep">:</span>${getActiveTheme()} (${getThemePreference()})</div>
 <div class="nf-line"><span class="nf-label">Projects</span><span class="nf-sep">:</span>${PROJECTS.length}</div>
 <div class="nf-line"><span class="nf-label">Experience</span><span class="nf-sep">:</span>${EXPERIENCE.length} role(s)</div>
 <div class="nf-line"><span class="nf-label">Skills</span><span class="nf-sep">:</span>${SKILLS.languages.length + SKILLS.frameworks.length + SKILLS.cs_fundamentals.length + SKILLS.systems.length + SKILLS.tools.length} entries</div>
@@ -1220,13 +1220,18 @@ export function mountPortfolioTerminal() {
     }
 
     function cmdTheme(args) {
-      const theme = args[0];
-      if (!theme) { print(`<span class="text-dim">current theme: ${state.theme}</span>`); print('<span class="text-dim">available: amber, green, cyan</span>'); return; }
-      if (['amber', 'green', 'cyan'].includes(theme)) {
-        document.body.classList.remove('theme-amber', 'theme-green', 'theme-cyan');
-        document.body.classList.add('theme-' + theme); state.theme = theme;
-        print(`<span class="text-success">→ theme switched to: ${theme}</span>`);
-      } else { print(`<span class="text-error">theme: unknown theme '${escapeHtml(theme)}'</span>`); print('<span class="text-dim">available: amber, green, cyan</span>'); }
+      const theme = args[0]?.toLowerCase();
+      if (!theme) {
+        print(`<span class="text-dim">current theme: ${getThemePreference()} (${getActiveTheme()})</span>`);
+        print('<span class="text-dim">available: auto, light, dark, beige, amber, green, cyan</span>');
+        return;
+      }
+      if (setThemePreference(theme)) {
+        print(`<span class="text-success">→ theme switched to: ${getThemePreference()} (${getActiveTheme()})</span>`);
+      } else {
+        print(`<span class="text-error">theme: unknown theme '${escapeHtml(theme)}'</span>`);
+        print('<span class="text-dim">available: auto, light, dark, beige, amber, green, cyan</span>');
+      }
     }
     function cmdSound(args) {
       const arg = args[0];
