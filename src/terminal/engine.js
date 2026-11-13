@@ -5,7 +5,6 @@ import { FEATURE_COMMANDS, createFeatureCommands } from '../features/commands.js
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import ProjectVisual from '../project-stories/ProjectVisual.jsx';
-import { getActiveTheme, getThemePreference, setThemePreference } from '../theme/themeController.js';
 
 export function mountPortfolioTerminal() {
     document.body.classList.add('theme-locked');
@@ -474,12 +473,7 @@ export function mountPortfolioTerminal() {
       paint(ctx, dots, dark, o.rMin);
     }
     // ── [3] Phosphor override ───────────────────────────────────
-    // Re-themes the orb's dots from grayscale to phosphor
-    // (fg-dim → fg-bright). Same function name as the engine's
-    // paint() — this later declaration wins. Palette refreshes
-    // automatically whenever the body theme class changes
-    // (i.e. the `theme` command), so the orb follows
-    // amber/green/cyan live.
+    // Paint the orb's dots in the current terminal phosphor palette.
 
     function hexToRgb(hex) {
       hex = String(hex).trim().replace('#', '');
@@ -789,7 +783,6 @@ export function mountPortfolioTerminal() {
       // ── keyboard capture (runs before the terminal's handler) ──
       introKeyHandler = function (e) {
         if (!introLayer || !introLayer.isConnected) return;
-        if (e.target?.closest?.('.theme-switch')) return;
         if (e.ctrlKey || e.metaKey || e.altKey) { e.stopPropagation(); return; } // keep browser shortcuts
         if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); introSubmit(); return; }
         if (e.key === 'Backspace') { e.preventDefault(); e.stopPropagation(); introBackspace(); return; }
@@ -883,7 +876,7 @@ export function mountPortfolioTerminal() {
 
     const commands = {
       help: cmdHelp, ls: cmdLs, cat: cmdCat, cd: cmdCd, whoami: cmdWhoami, mail: cmdMail, clear: cmdClear,
-      history: cmdHistory, pwd: cmdPwd, echo: cmdEcho, date: cmdDate, neofetch: cmdNeofetch, theme: cmdTheme,
+      history: cmdHistory, pwd: cmdPwd, echo: cmdEcho, date: cmdDate, neofetch: cmdNeofetch,
       sound: cmdSound, scanlines: cmdScanlines, sudo: cmdSudo, exit: cmdExit, man: cmdMan,
       vim: () => cmdEditor(['vim']), vi: () => cmdEditor(['vim']), emacs: () => cmdEditor(['emacs']), nano: () => cmdEditor(['nano']),
       about: () => commands.whoami([]), readme: () => commands.cat(['README.md']), contact: () => commands.cat(['contact.md']),
@@ -928,7 +921,6 @@ export function mountPortfolioTerminal() {
   <div class="man-entry"><span class="man-cmd">history</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;show command history.</div>
   <div class="man-entry"><span class="man-cmd">pwd</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;print current working directory.</div>
   <div class="man-entry"><span class="man-cmd">neofetch</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;display system info with ASCII art.</div>
-  <div class="man-entry"><span class="man-cmd">theme &lt;n&gt;</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;switch color theme: auto, light, dark, beige, amber, green, cyan.</div>
   <div class="man-entry"><span class="man-cmd">sound [on|off]</span> &nbsp;&nbsp;toggle typing sound effects.</div>
   <div class="man-entry"><span class="man-cmd">scanlines</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;toggle CRT scanline overlay.</div>
   <div class="man-entry"><span class="man-cmd">echo &lt;txt&gt;</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;echo text back to the terminal.</div>
@@ -965,7 +957,6 @@ export function mountPortfolioTerminal() {
         history: { synopsis: 'history', desc: 'Show previously entered commands in the current session.' },
         pwd: { synopsis: 'pwd', desc: 'Print the current working directory.' },
         neofetch: { synopsis: 'neofetch', desc: 'Display system information with ASCII art.' },
-        theme: { synopsis: 'theme <name>', desc: 'Switch color theme. Auto uses beige from 7 AM to 7 PM and dark amber at night. Options: auto, light, dark, beige, amber, green, cyan.' },
         sound: { synopsis: 'sound [on|off]', desc: 'Toggle typing sound effects. Without args, toggles current state.' },
         scanlines: { synopsis: 'scanlines [on|off]', desc: 'Toggle CRT scanline overlay. Without args, toggles current state.' },
         echo: { synopsis: 'echo <text>', desc: 'Echo text back to the terminal.' },
@@ -1206,7 +1197,7 @@ export function mountPortfolioTerminal() {
 <div class="nf-line"><span class="nf-label">CPU</span><span class="nf-sep">:</span>Intel Core i7 @ 3.2GHz</div>
 <div class="nf-line"><span class="nf-label">Memory</span><span class="nf-sep">:</span>16GB / 16GB</div>
 <div class="nf-line"><span class="nf-label">Resolution</span><span class="nf-sep">:</span>80x24 chars</div>
-<div class="nf-line"><span class="nf-label">Theme</span><span class="nf-sep">:</span>${getActiveTheme()} (${getThemePreference()})</div>
+<div class="nf-line"><span class="nf-label">Theme</span><span class="nf-sep">:</span>dark amber</div>
 <div class="nf-line"><span class="nf-label">Projects</span><span class="nf-sep">:</span>${PROJECTS.length}</div>
 <div class="nf-line"><span class="nf-label">Experience</span><span class="nf-sep">:</span>${EXPERIENCE.length} role(s)</div>
 <div class="nf-line"><span class="nf-label">Skills</span><span class="nf-sep">:</span>${SKILLS.languages.length + SKILLS.frameworks.length + SKILLS.cs_fundamentals.length + SKILLS.systems.length + SKILLS.tools.length} entries</div>
@@ -1219,20 +1210,6 @@ export function mountPortfolioTerminal() {
       printRaw(`<div class="neofetch"><pre class="neofetch-ascii">${ascii}</pre><div class="neofetch-info">${info}</div></div>`);
     }
 
-    function cmdTheme(args) {
-      const theme = args[0]?.toLowerCase();
-      if (!theme) {
-        print(`<span class="text-dim">current theme: ${getThemePreference()} (${getActiveTheme()})</span>`);
-        print('<span class="text-dim">available: auto, light, dark, beige, amber, green, cyan</span>');
-        return;
-      }
-      if (setThemePreference(theme)) {
-        print(`<span class="text-success">→ theme switched to: ${getThemePreference()} (${getActiveTheme()})</span>`);
-      } else {
-        print(`<span class="text-error">theme: unknown theme '${escapeHtml(theme)}'</span>`);
-        print('<span class="text-dim">available: auto, light, dark, beige, amber, green, cyan</span>');
-      }
-    }
     function cmdSound(args) {
       const arg = args[0];
       if (arg === 'on') state.sound = true; else if (arg === 'off') state.sound = false; else state.sound = !state.sound;

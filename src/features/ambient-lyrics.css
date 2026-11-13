@@ -32,14 +32,6 @@
   text-shadow: 0 0 30px color-mix(in srgb, var(--fg-bright) 25%, transparent);
 }
 
-body.theme-beige .ambient-lyrics__line {
-  opacity: 0.085;
-}
-
-body.theme-beige .screen.music-mode .ambient-lyrics__line {
-  opacity: 0.18;
-}
-
 @keyframes ambient-lyric-enter {
   from { opacity: 0; transform: translateY(12px); }
   to { transform: translateY(0); }
